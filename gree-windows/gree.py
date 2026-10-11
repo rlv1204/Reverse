@@ -259,7 +259,8 @@ def cmd_scan(args) -> None:
 
 def cmd_add(args) -> None:
     devs = load_devices()
-    d = Device(mac=args.mac.lower().replace(":", ""), ip=args.ip, name=args.name or args.mac)
+    mac = args.mac.lower().replace(":", "").replace("-", "")
+    d = Device(mac=mac, ip=args.ip, port=args.port, name=args.name or mac)
     bind(d)
     devs[d.mac] = d
     save_devices(devs)
@@ -404,6 +405,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("ip")
     p.add_argument("mac")
     p.add_argument("--name")
+    p.add_argument("--port", type=int, default=PORT, help="porta UDP, se houver redirecionamento no roteador")
     p.set_defaults(fn=cmd_add)
     sub.add_parser("list", help="lista aparelhos salvos").set_defaults(fn=cmd_list)
     p = sub.add_parser("status", help="lê o estado do aparelho")

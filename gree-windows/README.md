@@ -98,8 +98,85 @@ Para ter um atalho na área de trabalho, clique com o botão direito em `abrir-g
 |---|---|
 | "O Python não foi encontrado" | Refaça o Passo 2 e confira se marcou **Add python.exe to PATH**. Depois reinicie o computador. |
 | Clicou em **Procurar** e a lista ficou vazia | Confira se o computador está no mesmo Wi-Fi dos aparelhos (não use a rede de **convidados**). Confira o aviso do Firewall (Passo 4.3). |
+| Lista vazia e você tem **dois roteadores** | Veja a seção [Rede com dois roteadores](#rede-com-dois-roteadores-operadora--tp-link). |
 | Ainda vazia | Veja o IP e o MAC do aparelho no app Gree+ (configurações do aparelho) ou no roteador e use o comando `add` da seção abaixo. |
 | A janela abre e fecha na hora | Rode `instalar.cmd` de novo e veja se aparece alguma mensagem de erro. |
+
+## Rede com dois roteadores (operadora + TP-Link)
+
+É comum ter esta montagem:
+
+```
+Roteador da operadora ──cabo──► Computador (desktop)
+        │
+        └──cabo──► Switch ──cabo──► Roteador TP-Link ──Wi-Fi──► Ar-condicionados
+```
+
+O programa precisa que o computador e os ar-condicionados estejam na **mesma rede**. Se o TP-Link
+estiver como **roteador** (cabo ligado na porta azul **WAN/Internet**), ele cria uma segunda rede,
+separada da primeira. O computador não enxerga os aparelhos, a busca volta vazia e não é defeito do
+programa. O celular no Wi-Fi do TP-Link funciona porque fica do mesmo lado dos aparelhos.
+
+### Como saber se é o seu caso
+
+1. **IP do computador:** aperte **Windows + R**, digite `cmd` e Enter. Na janela preta, digite
+   `ipconfig` e Enter. Anote o **Endereço IPv4** (exemplo: `192.168.1.15`).
+2. **IP do ar-condicionado:** no app **Gree+**, abra o aparelho, toque em **⋯ / Configurações** e
+   procure as informações do aparelho. Você também pode olhar a lista de dispositivos conectados
+   no TP-Link (`http://tplinkwifi.net`). Exemplo: `192.168.0.104`.
+3. **Compare os três primeiros números.** Se forem iguais (`192.168.1.x` e `192.168.1.y`), a rede
+   já está certa. Se forem diferentes (`192.168.1.x` e `192.168.0.y`), são redes separadas: siga a
+   solução abaixo.
+
+### Solução recomendada: TP-Link em modo "Ponto de Acesso"
+
+Nesse modo o TP-Link só distribui o Wi-Fi, e quem entrega os endereços é o roteador da operadora.
+Tudo fica numa rede só. A internet continua funcionando igual, e o nome e a senha do Wi-Fi não mudam.
+
+**TP-Link Archer mais novo (tem a opção "Modo de Operação"):**
+
+1. No computador, abra o navegador e acesse `http://tplinkwifi.net`. Se não abrir, use o IP
+   do TP-Link, como `http://192.168.0.1`. Entre com a senha de administrador do TP-Link.
+2. Vá em **Avançado → Sistema → Modo de Operação** (em alguns modelos fica no topo da página).
+3. Escolha **Ponto de Acesso (Access Point)** e clique em **Salvar**. O TP-Link reinicia.
+4. Pode deixar o cabo na porta azul (WAN). No modo Ponto de Acesso ela vira porta comum.
+
+**TP-Link sem a opção "Modo de Operação" (modelos mais antigos, ex.: TL-WR840N, TL-WR940N):**
+
+1. Acesse `http://tplinkwifi.net` (ou `http://192.168.0.1`) e entre.
+2. **Rede → LAN:** troque o IP do TP-Link para um endereço livre **na rede da operadora**. Se o
+   computador é `192.168.1.15`, use por exemplo `192.168.1.250`. Salve; o TP-Link reinicia.
+3. **DHCP → Configurações DHCP:** marque **Desativar** e salve.
+4. **Mude o cabo** que vem do switch da porta azul **WAN** para uma das portas amarelas **LAN**.
+
+**Depois de qualquer uma das duas opções:**
+
+- Desligue e ligue os ar-condicionados no disjuntor (ou espere uns 10 minutos), para eles pegarem
+  um IP novo da operadora.
+- Repita o teste do `ipconfig`: agora os três primeiros números devem ser iguais.
+- Abra o `abrir-gree.cmd` e clique em **Procurar**.
+- O app Gree+ no celular continua funcionando; ele identifica o aparelho pelo MAC, não pelo IP.
+- Para entrar de novo na configuração do TP-Link, use o IP que você definiu (ex.:
+  `http://192.168.1.250`) ou procure o TP-Link na lista de dispositivos do roteador da operadora.
+
+### Alternativa (sem mexer no modo do TP-Link): redirecionar portas
+
+Se não puder mudar o TP-Link, dá para abrir uma porta para cada aparelho:
+
+1. No TP-Link, reserve IP fixo para cada ar-condicionado (**DHCP → Reserva de endereço**).
+2. Em **NAT / Encaminhamento → Servidores Virtuais**, crie uma regra por aparelho, protocolo **UDP**:
+   porta externa `7000` → IP do 1º aparelho, porta interna `7000`; porta externa `7001` → IP do
+   2º aparelho, porta interna `7000`; e assim por diante.
+3. Descubra o IP do TP-Link na rede da operadora (porta WAN, em **Status**), ex.: `192.168.1.20`.
+4. No computador, cadastre cada aparelho pelo IP do TP-Link, com a porta e o MAC dele:
+
+   ```powershell
+   py gree.py add 192.168.1.20 f4911e123456 --port 7000 --name Sala
+   py gree.py add 192.168.1.20 f4911e654321 --port 7001 --name Quarto
+   ```
+
+Nesse modo o botão **Procurar** não encontra os aparelhos, mas o controle funciona depois do
+cadastro. O MAC aparece no Gree+ ou na lista de dispositivos do TP-Link.
 
 ## Uso avançado (linha de comando)
 
