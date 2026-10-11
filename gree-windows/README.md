@@ -56,7 +56,7 @@ Use um computador ligado no **mesmo Wi-Fi** dos ar-condicionados.
 3. Vá na pasta **Downloads**, clique com o botão direito no arquivo `.zip` e escolha
    **Extrair tudo...** e depois **Extrair**.
 4. Dentro da pasta extraída, entre na pasta **`gree-windows`**. Ela deve ter os arquivos
-   `gree.py`, `instalar.bat` e `abrir-gree.bat`.
+   `gree.py`, `instalar.cmd` e `abrir-gree.cmd`.
    Dica: copie essa pasta para um lugar fácil, como **Documentos**.
 
 ### Passo 2: instalar o Python (o "motor" que roda o programa)
@@ -71,7 +71,7 @@ Use um computador ligado no **mesmo Wi-Fi** dos ar-condicionados.
 
 ### Passo 3: instalar o programa Gree
 
-1. Na pasta `gree-windows`, dê **dois cliques** em **`instalar.bat`**.
+1. Na pasta `gree-windows`, dê **dois cliques** em **`instalar.cmd`**.
 2. Se aparecer uma tela azul "O Windows protegeu o computador", clique em
    **Mais informações** e depois em **Executar assim mesmo**. Isso acontece com qualquer
    arquivo baixado da internet.
@@ -80,7 +80,7 @@ Use um computador ligado no **mesmo Wi-Fi** dos ar-condicionados.
 
 ### Passo 4: abrir e encontrar os aparelhos
 
-1. Dê **dois cliques** em **`abrir-gree.bat`**. Vai abrir a janela **"Gree local"**.
+1. Dê **dois cliques** em **`abrir-gree.cmd`**. Vai abrir a janela **"Gree local"**.
 2. Clique em **Procurar** e espere alguns segundos.
 3. Se o Windows mostrar o aviso do **Firewall**, marque **Redes privadas** e clique em
    **Permitir acesso**. Sem isso o programa não consegue falar com os aparelhos.
@@ -88,8 +88,8 @@ Use um computador ligado no **mesmo Wi-Fi** dos ar-condicionados.
 4. Os aparelhos aparecem na lista **Aparelho**. Escolha um, ajuste **Ligado**, **Modo**,
    **Temperatura** e **Ventilador** e clique em **Aplicar**.
 
-Nas próximas vezes, basta dar dois cliques em **`abrir-gree.bat`**.
-Para ter um atalho na área de trabalho, clique com o botão direito em `abrir-gree.bat` e escolha
+Nas próximas vezes, basta dar dois cliques em **`abrir-gree.cmd`**.
+Para ter um atalho na área de trabalho, clique com o botão direito em `abrir-gree.cmd` e escolha
 **Enviar para > Área de trabalho (criar atalho)**.
 
 ### Se algo der errado
@@ -99,7 +99,7 @@ Para ter um atalho na área de trabalho, clique com o botão direito em `abrir-g
 | "O Python não foi encontrado" | Refaça o Passo 2 e confira se marcou **Add python.exe to PATH**. Depois reinicie o computador. |
 | Clicou em **Procurar** e a lista ficou vazia | Confira se o computador está no mesmo Wi-Fi dos aparelhos (não use a rede de **convidados**). Confira o aviso do Firewall (Passo 4.3). |
 | Ainda vazia | Veja o IP e o MAC do aparelho no app Gree+ (configurações do aparelho) ou no roteador e use o comando `add` da seção abaixo. |
-| A janela abre e fecha na hora | Rode `instalar.bat` de novo e veja se aparece alguma mensagem de erro. |
+| A janela abre e fecha na hora | Rode `instalar.cmd` de novo e veja se aparece alguma mensagem de erro. |
 
 ## Uso avançado (linha de comando)
 
@@ -112,7 +112,7 @@ py gree.py rename f4911e123456 Sala      # nome amigável
 py gree.py status Sala
 py gree.py set Sala Pow=1 Mod=1 SetTem=23 WdSpd=0
 py gree.py set Sala Pow=0
-py gree.py gui                          # mesma janela do abrir-gree.bat
+py gree.py gui                          # mesma janela do abrir-gree.cmd
 ```
 
 Se o broadcast não achar nada, por exemplo com roteador mesh ou rede de convidados, use o

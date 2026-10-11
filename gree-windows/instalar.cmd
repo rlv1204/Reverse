@@ -26,5 +26,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo Pronto! Agora de dois cliques em "abrir-gree.bat".
+echo Pronto! Agora de dois cliques em "abrir-gree.cmd".
 pause
