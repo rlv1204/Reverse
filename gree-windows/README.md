@@ -43,17 +43,68 @@ aparelho fica salva em `%APPDATA%\gree-local\devices.json`.
 | `Tur`, `Quiet`, `Lig`, `Blo`, `Health`, `SwhSlp`, `SvSt` | Turbo, silencioso, luz, X-Fan, ionizador, sono, economia | 0, 1 |
 | `TemSen` | Temperatura ambiente (só leitura) | alguns firmwares somam 40 |
 
-## Instalação no Windows
+## Instalação no Windows (passo a passo)
 
-1. Instale o Python 3.10+ em <https://www.python.org/downloads/windows/> (marque "Add python.exe to PATH").
-2. Abra o PowerShell nesta pasta e rode:
+Não precisa saber programar. Você vai fazer isso **uma única vez** e leva uns 10 minutos.
+Use um computador ligado no **mesmo Wi-Fi** dos ar-condicionados.
 
-   ```powershell
-   py -m pip install -r requirements.txt
-   ```
-3. Na primeira execução, o Firewall do Windows pode perguntar sobre o Python: permita em **Redes privadas**.
+### Passo 1: baixar os arquivos deste programa
 
-## Uso
+1. Abra o navegador e entre no GitHub com a sua conta.
+2. Acesse o repositório, escolha o branch `claude/gree-plus-windows-replication-gy70q9` e clique no
+   botão verde **Code** e depois em **Download ZIP**.
+3. Vá na pasta **Downloads**, clique com o botão direito no arquivo `.zip` e escolha
+   **Extrair tudo...** e depois **Extrair**.
+4. Dentro da pasta extraída, entre na pasta **`gree-windows`**. Ela deve ter os arquivos
+   `gree.py`, `instalar.bat` e `abrir-gree.bat`.
+   Dica: copie essa pasta para um lugar fácil, como **Documentos**.
+
+### Passo 2: instalar o Python (o "motor" que roda o programa)
+
+1. Acesse <https://www.python.org/downloads/> e clique no botão amarelo **Download Python**.
+2. Abra o arquivo baixado.
+3. **Muito importante:** na primeira tela, marque a caixinha
+   **"Add python.exe to PATH"** (fica embaixo da janela).
+4. Clique em **Install Now** e espere terminar. Clique em **Close**.
+
+> Se o Windows perguntar "Deseja permitir que este aplicativo faça alterações?", clique em **Sim**.
+
+### Passo 3: instalar o programa Gree
+
+1. Na pasta `gree-windows`, dê **dois cliques** em **`instalar.bat`**.
+2. Se aparecer uma tela azul "O Windows protegeu o computador", clique em
+   **Mais informações** e depois em **Executar assim mesmo**. Isso acontece com qualquer
+   arquivo baixado da internet.
+3. Uma janela preta vai mostrar alguns textos. Espere aparecer
+   **"Pronto!"** e aperte qualquer tecla para fechar.
+
+### Passo 4: abrir e encontrar os aparelhos
+
+1. Dê **dois cliques** em **`abrir-gree.bat`**. Vai abrir a janela **"Gree local"**.
+2. Clique em **Procurar** e espere alguns segundos.
+3. Se o Windows mostrar o aviso do **Firewall**, marque **Redes privadas** e clique em
+   **Permitir acesso**. Sem isso o programa não consegue falar com os aparelhos.
+   Se você permitiu só agora, clique em **Procurar** de novo.
+4. Os aparelhos aparecem na lista **Aparelho**. Escolha um, ajuste **Ligado**, **Modo**,
+   **Temperatura** e **Ventilador** e clique em **Aplicar**.
+
+Nas próximas vezes, basta dar dois cliques em **`abrir-gree.bat`**.
+Para ter um atalho na área de trabalho, clique com o botão direito em `abrir-gree.bat` e escolha
+**Enviar para > Área de trabalho (criar atalho)**.
+
+### Se algo der errado
+
+| O que aconteceu | O que fazer |
+|---|---|
+| "O Python não foi encontrado" | Refaça o Passo 2 e confira se marcou **Add python.exe to PATH**. Depois reinicie o computador. |
+| Clicou em **Procurar** e a lista ficou vazia | Confira se o computador está no mesmo Wi-Fi dos aparelhos (não use a rede de **convidados**). Confira o aviso do Firewall (Passo 4.3). |
+| Ainda vazia | Veja o IP e o MAC do aparelho no app Gree+ (configurações do aparelho) ou no roteador e use o comando `add` da seção abaixo. |
+| A janela abre e fecha na hora | Rode `instalar.bat` de novo e veja se aparece alguma mensagem de erro. |
+
+## Uso avançado (linha de comando)
+
+Abra a pasta `gree-windows`, clique na barra de endereço do Explorer, digite `powershell` e
+aperte Enter. Na janela que abrir:
 
 ```powershell
 py gree.py scan                         # descobre e pareia os aparelhos
@@ -61,12 +112,12 @@ py gree.py rename f4911e123456 Sala      # nome amigável
 py gree.py status Sala
 py gree.py set Sala Pow=1 Mod=1 SetTem=23 WdSpd=0
 py gree.py set Sala Pow=0
-py gree.py gui                          # janela com liga/desliga, modo, temperatura, ventilador
+py gree.py gui                          # mesma janela do abrir-gree.bat
 ```
 
 Se o broadcast não achar nada, por exemplo com roteador mesh ou rede de convidados, use o
 broadcast da sua sub-rede (`py gree.py scan --broadcast 192.168.0.255`) ou cadastre o aparelho
-direto pelo IP e MAC, que aparecem no roteador ou no Gree+ em *Configurações do aparelho*:
+direto pelo IP e MAC:
 
 ```powershell
 py gree.py add 192.168.0.50 f4911e123456 --name Quarto
