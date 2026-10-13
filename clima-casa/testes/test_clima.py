@@ -173,7 +173,7 @@ class ManagerTests(unittest.TestCase):
         self.gree_a.silent = True
         entry = self.manager._gree["9424b883c954"]
         entry.device.timeout = 0.3
-        entry.updated = 0
+        entry.updated = float("-inf")
         self.manager._last_discovery = 10**12  # sem nova procura durante o teste
         dev = next(d for d in self.manager.devices() if d["id"] == "gree:9424b883c954")
         self.assertFalse(dev["online"])

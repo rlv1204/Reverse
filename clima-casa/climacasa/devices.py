@@ -35,6 +35,9 @@ GREE_REDISCOVER_INTERVAL = 60.0
 LG_TTL = 30.0
 LG_TTL_ERROR = 60.0
 LG_LIST_TTL = 600.0
+# "Nunca aconteceu".  O relógio monotônico pode começar perto de zero logo
+# depois de ligar o computador, então 0.0 não serve como marcador.
+NEVER = float("-inf")
 
 
 class ControlError(Exception):
@@ -63,7 +66,7 @@ def _swing_options(vertical: bool, horizontal: bool) -> list[dict]:
 @dataclass
 class _Entry:
     raw: dict = field(default_factory=dict)
-    updated: float = 0.0
+    updated: float = NEVER
     error: str | None = None
     lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -94,9 +97,9 @@ class Manager:
         self._gree: dict[str, _GreeEntry] = {}
         self._lg: dict[str, _LGEntry] = {}
         self._lg_client: lg.ThinQClient | None = None
-        self._lg_listed = 0.0
+        self._lg_listed = NEVER
         self._lg_error: str | None = None
-        self._last_discovery = 0.0
+        self._last_discovery = NEVER
         self._discovery_lock = threading.Lock()
         for mac, saved in self.config.data["gree"].items():
             self._add_gree_entry(mac, saved)
@@ -161,7 +164,7 @@ class Manager:
             except gree.GreeError as exc:
                 failed.append({"mac": item.mac, "ip": item.ip, "error": str(exc)})
             self._save_gree(item.mac)
-            entry.updated = 0.0  # força leitura do estado
+            entry.updated = NEVER  # força leitura do estado
             (new if is_new else updated).append({"id": f"gree:{item.mac}", "ip": item.ip, "name": self._name(f"gree:{item.mac}")})
         return {"found": len(found), "new": new, "updated": updated, "failed": failed}
 
@@ -266,7 +269,7 @@ class Manager:
         settings = self.config.data["lg"]
         with self._lock:
             self._lg.clear()
-            self._lg_listed = 0.0
+            self._lg_listed = NEVER
             self._lg_error = None
             self._lg_client = None
             if settings.get("token"):
@@ -429,7 +432,7 @@ class Manager:
     def _base_view(self, device_id: str, brand: str, source: str, entry: _Entry) -> dict:
         return {
             "id": device_id, "brand": brand, "name": self._name(device_id), "source": source,
-            "online": entry.error is None and bool(entry.raw), "error": entry.error, "loaded": entry.updated > 0,
+            "online": entry.error is None and bool(entry.raw), "error": entry.error, "loaded": bool(entry.raw) or entry.error is not None,
             "power": None, "mode": None, "modes": [], "target": None, "tempMin": 16, "tempMax": 30, "tempStep": 1,
             "current": None, "humidity": None, "fan": None, "fans": [], "swing": None, "swings": [], "features": [],
         }
