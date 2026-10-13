@@ -189,7 +189,7 @@ class Manager:
                 entry.raw = dev.status()
                 entry.error = None
             except gree.GreeTimeout:
-                entry.error = "Aparelho sem resposta na rede local. Ele está ligado na tomada e no mesmo Wi-Fi?"
+                entry.error = "Aparelho sem resposta na rede local. Ele está ligado na tomada? O computador está na mesma rede da casa?"
                 self._maybe_rediscover()
             except gree.GreeError as exc:
                 entry.error = str(exc)
@@ -251,7 +251,7 @@ class Manager:
             try:
                 confirmed = entry.device.command(values)
             except gree.GreeTimeout:
-                raise ControlError("O aparelho não respondeu. Verifique se ele está ligado na tomada e no Wi-Fi.") from None
+                raise ControlError("O aparelho não respondeu. Verifique se ele está ligado na tomada e conectado à rede da casa.") from None
             except gree.GreeError as exc:
                 raise ControlError(str(exc)) from None
             entry.raw.update(values)

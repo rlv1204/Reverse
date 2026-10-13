@@ -15,8 +15,8 @@ Há duas gerações de criptografia:
   * v2: AES-128-GCM, chave genérica ``{yxAHAY_Lm6pbC/<``, nonce e AAD fixos.
 O programa detecta automaticamente qual delas o aparelho usa.
 
-Tudo acontece apenas na rede local: o computador precisa estar no mesmo
-Wi-Fi/roteador que os aparelhos.
+Tudo acontece apenas na rede local: o computador precisa estar ligado (por
+cabo ou Wi-Fi) ao mesmo roteador que os aparelhos.
 """
 
 from __future__ import annotations
@@ -187,7 +187,7 @@ def scan_targets(extra: list[str] | None = None) -> list[str]:
 
     Além do broadcast, enviamos um pedido individual para cada endereço da
     sub-rede /24 de cada interface: alguns roteadores e o próprio Windows nem
-    sempre repassam broadcasts para o Wi-Fi.
+    sempre repassam broadcasts entre o cabo e o Wi-Fi.
     """
     targets = ["255.255.255.255"]
     for ip in local_ipv4_addresses():

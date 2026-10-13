@@ -4,14 +4,17 @@ Programa para Windows que liga, desliga e ajusta os ares-condicionados da casa:
 
 | Aparelho | Nome | Como o programa conversa com ele |
 | --- | --- | --- |
-| Gree (app Gree+) | **Ângelo** — MAC `9424b883c954` | Direto pela rede Wi-Fi da casa |
-| Gree (app Gree+) | **Escritório** — MAC `9424b883d28b` | Direto pela rede Wi-Fi da casa |
+| Gree (app Gree+) | **Ângelo** — MAC `9424b883c954` | Direto pela rede da casa (sem internet) |
+| Gree (app Gree+) | **Escritório** — MAC `9424b883d28b` | Direto pela rede da casa (sem internet) |
 | LG (app LG ThinQ) | (nome que está no app LG) | Pela API oficial da LG, via internet |
 
 Em cada aparelho dá para controlar: ligar/desligar, temperatura (16 a 30 °C), modo
 (Frio, Seco, Ventilar, Auto, Calor), velocidade do vento, direção do vento e funções
 extras (Turbo, Sono, Silencioso, Luz do painel etc.). A tela também mostra a
 temperatura do ambiente (e a umidade, quando o aparelho informa).
+
+Funciona com o computador ligado **por cabo de rede** (sem Wi-Fi) — veja a seção
+[Computador ligado por cabo](#computador-ligado-por-cabo-de-rede).
 
 Os aplicativos do celular (Gree+ e LG ThinQ) **continuam funcionando normalmente**.
 Os dois podem ser usados ao mesmo tempo que o Clima Casa.
@@ -82,8 +85,9 @@ eles aparecem com os nomes **Ângelo** e **Escritório**.
 
 Se não aparecerem:
 
-1. Confira se o computador está ligado no **mesmo roteador/Wi-Fi** dos aparelhos
-   (não pode ser a rede de "visitantes").
+1. Confira se o cabo de rede do computador está ligado no **mesmo roteador** que
+   fornece o Wi-Fi dos aparelhos (veja a seção
+   [Computador ligado por cabo](#computador-ligado-por-cabo-de-rede)).
 2. Clique no ícone **⚙ (Configurações)**, no canto inferior direito, e depois em
    **Procurar aparelhos Gree**.
 3. Ainda não apareceu? Descubra o IP do aparelho na página do seu roteador
@@ -94,6 +98,40 @@ Se não aparecerem:
 > Sobre a **atualização de firmware** que o app Gree+ está oferecendo (a bolinha
 > vermelha): não é necessária para o Clima Casa. Se você atualizar, o programa
 > detecta sozinho o novo tipo de criptografia dos aparelhos.
+
+## Computador ligado por cabo de rede
+
+Não é preciso ter Wi-Fi no computador. Os aparelhos Gree ficam no Wi-Fi, o
+computador fica no cabo, e o **roteador liga os dois** — desde que o cabo esteja
+no **mesmo roteador** que transmite o Wi-Fi dos aparelhos (ou num switch/ponto
+de rede que vá até ele). O aparelho LG não depende disso, pois é controlado pela
+internet.
+
+**Como conferir se estão na mesma rede** (só se os Gree não forem encontrados):
+
+1. Rode o `INSTALAR.bat`. Ele mostra o endereço do computador, por exemplo
+   `Endereço(s) deste computador na rede: 192.168.0.15`.
+2. No celular, ligado no Wi-Fi da casa, veja o endereço IP dele:
+   iPhone: **Ajustes → Wi-Fi → (i)** ao lado da rede → **Endereço IP**.
+   Android: **Configurações → Wi-Fi → engrenagem** da rede → **Avançado**.
+3. Compare os **três primeiros números**. Exemplo: `192.168.0.15` (computador) e
+   `192.168.0.42` (celular) → mesma rede, tudo certo.
+   Se forem diferentes (ex.: `192.168.1.15` e `192.168.0.42`), há **dois
+   roteadores** na casa (comum quando a operadora instala um modem e há outro
+   roteador de Wi-Fi). Soluções, da mais simples para a mais trabalhosa:
+   - ligue o cabo do computador numa porta do **roteador do Wi-Fi**; ou
+   - digite o IP do aparelho em **⚙ Configurações → IP (opcional) → Adicionar**
+     (o IP aparece na lista de dispositivos do roteador do Wi-Fi); ou
+   - peça para colocar o segundo roteador em modo **"bridge"/"ponto de acesso"**.
+
+**Tipo de rede do Windows.** O Windows às vezes classifica a conexão por cabo
+como **Pública**, o que faz o Firewall bloquear os aparelhos. O `INSTALAR.bat`
+mostra o tipo da rede. Se aparecer "rede Pública":
+**Configurações → Rede e Internet → Ethernet → Tipo de perfil de rede →
+Rede privada**.
+
+**VPN.** Se o computador usa VPN (por exemplo, do trabalho), desligue-a ao usar
+o Clima Casa: muitas VPNs bloqueiam o acesso à rede da casa.
 
 ## Passo 5 — Aparelho LG (LG ThinQ)
 
@@ -122,7 +160,7 @@ outro no mesmo site e cole de novo.
 
 | O que aparece | O que fazer |
 | --- | --- |
-| "Nenhum aparelho Gree respondeu" | Computador e aparelhos no mesmo Wi-Fi? Ar-condicionado ligado na tomada? Permitiu o Python no Firewall (Passo 2, item 4)? Se não permitiu: Menu Iniciar → "Firewall do Windows Defender" → "Permitir um aplicativo…" → marque **Python** em **Privada**. |
+| "Nenhum aparelho Gree respondeu" | Cabo do computador no mesmo roteador do Wi-Fi dos aparelhos (seção "Computador ligado por cabo")? Rede do Windows como **Privada**? VPN desligada? Ar-condicionado ligado na tomada? Permitiu o Python no Firewall (Passo 2, item 4)? Se não permitiu: Menu Iniciar → "Firewall do Windows Defender" → "Permitir um aplicativo…" → marque **Python** em **Privada**. |
 | "Aparelho sem resposta na rede local" | O aparelho pode ter sido desligado da tomada ou trocado de IP. O programa procura de novo sozinho em até 1 minuto. |
 | "Token da LG inválido" | Gere um novo token (Passo 5) e cole de novo. |
 | "Ligue o aparelho antes de alterar esta opção" | O LG não aceita mudar o modo com o aparelho desligado. Ligue primeiro. |

@@ -71,6 +71,21 @@ def open_window(url: str) -> None:
     webbrowser.open(url)
 
 
+def _windows_network_profiles() -> list[tuple[str, str]]:
+    """Tipo de cada rede no Windows ("Public" ou "Private"), sem exigir administrador."""
+    if sys.platform != "win32":
+        return []
+    try:
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "Get-NetConnectionProfile | ForEach-Object { $_.InterfaceAlias + '|' + $_.NetworkCategory }"],
+            capture_output=True, text=True, timeout=15,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [tuple(line.split("|", 1)) for line in out.splitlines() if "|" in line]
+
+
 def diagnose() -> int:
     """Verificação usada pelo instalador: rede local e aparelhos Gree visíveis."""
     from . import gree
@@ -79,6 +94,11 @@ def diagnose() -> int:
     print(f"Python {sys.version.split()[0]} - OK")
     ips = gree.local_ipv4_addresses()
     print("Endereço(s) deste computador na rede:", ", ".join(ips) or "nenhum encontrado")
+    for alias, category in _windows_network_profiles():
+        kind = "Privada" if category.strip() in ("Private", "DomainAuthenticated") else "Pública"
+        print(f"  Conexão '{alias}': rede {kind}")
+        if kind == "Pública":
+            print("    -> Recomendado mudar para Privada (veja 'Computador ligado por cabo' no LEIA-ME).")
     print("Procurando aparelhos Gree na rede (alguns segundos)...")
     try:
         found = gree.discover(timeout=4.0)
@@ -93,6 +113,10 @@ def diagnose() -> int:
         print("  Nenhum aparelho Gree respondeu. Veja a seção 'Problemas comuns' do LEIA-ME.")
     elif missing:
         print("  Não responderam desta vez:", ", ".join(missing))
+    for dev in found:
+        if not any(ip.rsplit(".", 1)[0] == dev.ip.rsplit(".", 1)[0] for ip in ips):
+            print(f"  Aviso: o aparelho {dev.ip} está em outra faixa de rede que o computador"
+                  " (provavelmente há dois roteadores). Funciona, mas confira o IP se ele mudar.")
     return 0
 
 

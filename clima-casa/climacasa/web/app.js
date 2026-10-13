@@ -372,7 +372,7 @@ async function scan(ip) {
     const parts = [];
     if (r.found === 0) {
       out.className = "hint bad";
-      out.textContent = "Nenhum aparelho Gree respondeu. Confira se o computador está no mesmo Wi-Fi e se o Firewall do Windows liberou o programa (veja o LEIA-ME).";
+      out.textContent = "Nenhum aparelho Gree respondeu. Confira se o cabo de rede do computador está ligado ao mesmo roteador do Wi-Fi dos aparelhos e se o Firewall do Windows liberou o programa (veja o LEIA-ME).";
       return;
     }
     parts.push(`${r.found} aparelho(s) encontrado(s)`);
