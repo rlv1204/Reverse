@@ -1,0 +1,2 @@
+# Scripts do Windows usam quebras de linha CRLF (mesma regra dos *.cmd na raiz).
+*.bat text eol=crlf

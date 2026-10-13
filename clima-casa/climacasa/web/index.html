@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="clima-token" content="{{TOKEN}}">
+<title>Clima Casa</title>
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main class="panel" id="app">
+  <nav class="tabs" id="tabs" aria-label="Aparelhos"></nav>
+
+  <section id="empty" class="empty" hidden>
+    <h2>Nenhum aparelho ainda</h2>
+    <p>Abra as <strong>Configurações</strong> (ícone no canto inferior direito) para procurar os aparelhos Gree e conectar sua conta LG.</p>
+    <button class="primary" data-open-settings>Abrir configurações</button>
+  </section>
+
+  <section id="control" hidden>
+    <header class="head">
+      <div>
+        <h1 id="name">—</h1>
+        <div class="chips">
+          <span class="chip" id="chip-temp" title="Temperatura do ambiente"><svg><use href="#i-thermo"/></svg><b>—</b></span>
+          <span class="chip" id="chip-hum" title="Umidade do ambiente"><svg><use href="#i-drop"/></svg><b>—</b></span>
+        </div>
+      </div>
+      <button class="power" id="power" aria-label="Ligar ou desligar"><svg><use href="#i-power"/></svg></button>
+    </header>
+
+    <div class="unit" id="unit" aria-hidden="true">
+      <svg viewBox="0 0 260 150" class="ac">
+        <defs>
+          <linearGradient id="g-body" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d8dde4"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="14" width="220" height="66" rx="12" fill="url(#g-body)"/>
+        <g stroke="#c4cad3" stroke-width="1">
+          <path d="M120 26h104M120 31h104M120 36h104M120 41h104M120 46h104"/>
+        </g>
+        <rect x="26" y="66" width="208" height="7" rx="3.5" fill="#0d1117"/>
+        <rect class="ac-led" x="196" y="52" width="26" height="9" rx="2"/>
+        <text class="ac-led-text" x="209" y="59.4" text-anchor="middle" id="led">24°</text>
+        <g class="flow" id="flow">
+          <path d="M60 82 q -6 24 -18 52"/><path d="M85 82 q -3 26 -10 56"/><path d="M110 82 q 0 26 -4 58"/>
+          <path d="M135 82 q 2 26 2 60"/><path d="M160 82 q 4 26 8 58"/><path d="M185 82 q 6 24 14 56"/>
+          <path d="M207 82 q 8 22 20 50"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="temp">
+      <button class="round" id="minus" aria-label="Diminuir temperatura"><svg><use href="#i-minus"/></svg></button>
+      <div class="value"><span id="target">—</span><sup>°C</sup></div>
+      <button class="round" id="plus" aria-label="Aumentar temperatura"><svg><use href="#i-plus"/></svg></button>
+    </div>
+    <div class="slider">
+      <input type="range" id="slider" min="16" max="30" step="1" aria-label="Temperatura desejada">
+      <div class="ticks" id="ticks"></div>
+      <div class="scale"><span id="s-min">16°</span><span id="s-mid">23°</span><span id="s-max">30°</span></div>
+    </div>
+
+    <div class="modes" id="modes" role="radiogroup" aria-label="Modo"></div>
+
+    <div class="pickers">
+      <label class="picker" id="fan-picker">
+        <svg class="pi"><use href="#i-fan"/></svg>
+        <span><small>Vento</small><b id="fan-label">—</b></span>
+        <svg class="chev"><use href="#i-chev"/></svg>
+        <select id="fan" aria-label="Velocidade do vento"></select>
+      </label>
+      <label class="picker" id="swing-picker">
+        <svg class="pi"><use href="#i-move"/></svg>
+        <span><small>Direção</small><b id="swing-label">—</b></span>
+        <svg class="chev"><use href="#i-chev"/></svg>
+        <select id="swing" aria-label="Direção do vento"></select>
+      </label>
+    </div>
+
+    <div class="features" id="features"></div>
+
+    <p class="alert" id="alert" hidden></p>
+  </section>
+
+  <footer class="foot">
+    <span class="conn" id="conn"><svg><use href="#i-shield"/></svg><span id="conn-text">Carregando…</span></span>
+    <button class="icon" data-open-settings aria-label="Configurações"><svg><use href="#i-sliders"/></svg></button>
+  </footer>
+</main>
+
+<dialog id="settings" class="settings">
+  <form method="dialog" class="sheet">
+    <header><h2>Configurações</h2><button class="icon" value="close" aria-label="Fechar"><svg><use href="#i-x"/></svg></button></header>
+
+    <section>
+      <h3>Aparelhos Gree (app Gree+)</h3>
+      <p class="hint">O computador precisa estar no <b>mesmo Wi-Fi</b> dos aparelhos.</p>
+      <button type="button" class="primary" id="scan">Procurar aparelhos Gree</button>
+      <div class="row">
+        <input id="manual-ip" inputmode="decimal" placeholder="IP (opcional), ex.: 192.168.0.25" autocomplete="off">
+        <button type="button" id="add-ip">Adicionar</button>
+      </div>
+      <p class="hint" id="scan-result"></p>
+    </section>
+
+    <section>
+      <h3>Aparelho LG (app LG ThinQ)</h3>
+      <p class="hint">Gere um token em <b>connect-pat.lgthinq.com</b> (passo a passo no LEIA-ME) e cole abaixo.</p>
+      <p class="hint" id="lg-status"></p>
+      <input id="lg-token" type="password" placeholder="Cole aqui o token de acesso pessoal da LG" autocomplete="off">
+      <div class="row">
+        <select id="lg-country" aria-label="País da conta LG">
+          <option value="BR">Brasil</option><option value="PT">Portugal</option><option value="US">Estados Unidos</option>
+          <option value="AR">Argentina</option><option value="MX">México</option>
+        </select>
+        <button type="button" class="primary" id="lg-save">Salvar e testar</button>
+      </div>
+      <button type="button" class="link" id="lg-remove" hidden>Desconectar conta LG</button>
+    </section>
+
+    <section>
+      <h3>Nomes dos aparelhos</h3>
+      <div id="names"></div>
+    </section>
+
+    <section>
+      <button type="button" class="danger" id="quit">Encerrar o programa</button>
+    </section>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<svg class="sprite" aria-hidden="true">
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8M7.1 6.3a8 8 0 1 0 9.8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M10 14.8V5a2 2 0 1 1 4 0v9.8a4 4 0 1 1-4 0z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 4l3 2 3-2M9 20l3-2 3 2M4 10.5l3.5-.5L6 7M20 13.5l-3.5.5L18 17M4 13.5l3.5.5L6 17M20 10.5l-3.5-.5L18 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-fan" viewBox="0 0 24 24"><path d="M12 12c0-3-1-7 2-8.5 2.5-1.2 4 1.5 2.5 3.5S12 9 12 12zm0 0c3 0 7-1 8.5 2 1.2 2.5-1.5 4-3.5 2.5S15 12 12 12zm0 0c0 3 1 7-2 8.5-2.5 1.2-4-1.5-2.5-3.5S12 15 12 12zm0 0c-3 0-7 1-8.5-2C2.3 7.5 5 6 7 7.5S9 12 12 12z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M14 4c3-1.5 6-1 6-1s.5 3-1 6l-6 6-4-4zM9 11l-4 .5L3 14l4 1M13 15l-.5 4L10 21l-1-4M6 18c-1 1-1.5 3-1.5 3s2-.5 3-1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-quiet" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM17 9l4 6M21 9l-4 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-9 6-14 15-14 0 9-5 15-14 15M5 19l7-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-eco" viewBox="0 0 24 24"><path d="M13 2L5 13h6l-1 9 8-11h-6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4M4 12h6M14 12h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+<script src="app.js"></script>
+</body>
+</html>

@@ -10,6 +10,7 @@
     ".devin/**",
     "tests/fixtures/**",
     "third_party/**",
+    "clima-casa/**",
     "tests/conformance/**/*.c",
     "tests/conformance/**/*.m",
     "tests/conformance/**/*.swift",
