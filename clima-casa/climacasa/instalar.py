@@ -1,6 +1,14 @@
-"""Cria os atalhos do Clima Casa no Windows (Área de Trabalho e Menu Iniciar).
+r"""Instala (ou atualiza) o Clima Casa no Windows.
 
 Executado pelo INSTALAR.bat:  python -m climacasa.instalar
+
+1. pede para a cópia aberta do programa se encerrar;
+2. copia os arquivos da pasta extraída do zip para a pasta de instalação
+   (%LOCALAPPDATA%\Programs\ClimaCasa), substituindo a versão anterior;
+3. cria/atualiza os atalhos da Área de Trabalho e do Menu Iniciar.
+
+As configurações (aparelhos, token da LG, nomes) ficam em %APPDATA%\ClimaCasa
+e são mantidas.
 """
 
 from __future__ import annotations
@@ -12,9 +20,14 @@ import sys
 import zlib
 from pathlib import Path
 
+from . import __version__, instancia
+from .atualizar import APP_DIR, UpdateError, install_from_folder
 from .config import config_dir
 
-APP_DIR = Path(__file__).resolve().parent.parent
+
+def install_dir() -> Path:
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(base) / "Programs" / "ClimaCasa"
 
 
 # ---------------------------------------------------------------- ícone
@@ -110,9 +123,9 @@ def pythonw_path() -> str:
     return str(candidate if candidate.is_file() else exe)
 
 
-def create_shortcuts() -> None:
+def create_shortcuts(app_dir: Path) -> None:
     icon = write_icon(config_dir() / "clima-casa.ico")
-    env = {**os.environ, "CC_TARGET": pythonw_path(), "CC_WORKDIR": str(APP_DIR), "CC_ICON": str(icon)}
+    env = {**os.environ, "CC_TARGET": pythonw_path(), "CC_WORKDIR": str(app_dir), "CC_ICON": str(icon)}
     subprocess.run(
         ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", _POWERSHELL],
         env=env, check=True,
@@ -123,10 +136,21 @@ def main() -> int:
     if sys.platform != "win32":
         print("Os atalhos são criados apenas no Windows. Para abrir: python -m climacasa")
         return 0
+    if not instancia.quit_running():
+        print("O Clima Casa está aberto e não fechou sozinho. Feche a janela dele e rode o INSTALAR.bat de novo.")
+        return 1
+    dest = install_dir()
     try:
-        create_shortcuts()
+        if dest.resolve() != APP_DIR.resolve():
+            install_from_folder(APP_DIR, dest)
+    except (OSError, UpdateError) as exc:
+        print(f"Não foi possível copiar os arquivos para {dest} ({exc}).")
+        return 1
+    print(f"Clima Casa {__version__} instalado em {dest}")
+    try:
+        create_shortcuts(dest)
     except (OSError, subprocess.CalledProcessError) as exc:
-        print(f"Não foi possível criar os atalhos ({exc}). Use o arquivo ABRIR-CLIMA-CASA.bat.")
+        print(f"Não foi possível criar os atalhos ({exc}).")
         return 1
     print("Atalho 'Clima Casa' criado na Área de Trabalho e no Menu Iniciar.")
     return 0

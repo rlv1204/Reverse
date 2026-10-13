@@ -17,28 +17,63 @@ import traceback
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote
 
+from . import __version__
+from .atualizar import Updater, UpdateError
 from .devices import ControlError, Manager
+from .instancia import APP_SIGNATURE
 
 WEB_DIR = Path(__file__).with_name("web")
-APP_SIGNATURE = "clima-casa"
+# Depois que a janela avisa que foi fechada, esperamos este tempo antes de
+# encerrar: se ela só estava recarregando, o próximo pedido cancela o fim.
+CLOSE_GRACE = 15.0
+UPDATE_CHECK_TTL = 6 * 3600
 
 
 class ClimaServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, port: int, manager: Manager) -> None:
+    def __init__(self, port: int, manager: Manager, updater: Updater | None = None) -> None:
         super().__init__(("127.0.0.1", port), Handler)
         self.manager = manager
+        self.updater = updater or Updater()
         self.token = secrets.token_urlsafe(24)
-        self.last_heartbeat = time.monotonic()
-        self.first_heartbeat = False
+        self.instance = secrets.token_hex(8)
         self.quit_event = threading.Event()
+        self.restart_requested = False
+        self._close_timer: threading.Timer | None = None
+        self._timer_lock = threading.Lock()
+        self._update_cache: tuple[float, dict] | None = None
 
     @property
     def port(self) -> int:
         return self.server_address[1]
+
+    def window_closed(self) -> None:
+        with self._timer_lock:
+            if self._close_timer:
+                self._close_timer.cancel()
+            self._close_timer = threading.Timer(CLOSE_GRACE, self.quit_event.set)
+            self._close_timer.daemon = True
+            self._close_timer.start()
+
+    def activity(self) -> None:
+        with self._timer_lock:
+            if self._close_timer:
+                self._close_timer.cancel()
+                self._close_timer = None
+
+    def update_info(self, force: bool = False) -> dict:
+        now = time.monotonic()
+        if not force and self._update_cache and now - self._update_cache[0] < UPDATE_CHECK_TTL:
+            return self._update_cache[1]
+        try:
+            info = self.updater.check()
+        except UpdateError as exc:
+            info = {"current": __version__, "available": False, "error": str(exc)}
+        self._update_cache = (now, info)
+        return info
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -70,7 +105,17 @@ class Handler(BaseHTTPRequestHandler):
         return host in (f"127.0.0.1:{self.server.port}", f"localhost:{self.server.port}")
 
     def _api_allowed(self) -> bool:
-        return self._host_ok() and secrets.compare_digest(self.headers.get("X-Clima-Token", ""), self.server.token)
+        if not self._host_ok():
+            return False
+        token = self.headers.get("X-Clima-Token", "")
+        if not token and self.path.startswith("/api/bye?"):
+            # navigator.sendBeacon (usado ao fechar a janela) não envia cabeçalhos.
+            token = (parse_qs(self.path.split("?", 1)[1]).get("t") or [""])[0]
+        if not secrets.compare_digest(token, self.server.token):
+            return False
+        if not self.path.startswith("/api/bye"):
+            self.server.activity()
+        return True
 
     def _body(self) -> dict:
         length = int(self.headers.get("Content-Length") or 0)
@@ -92,7 +137,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.FORBIDDEN, b"Forbidden", "text/plain")
         path = unquote(self.path.split("?", 1)[0])
         if path == "/ping":
-            return self._json(200, {"app": APP_SIGNATURE})
+            return self._json(200, {"app": APP_SIGNATURE, "version": __version__, "instance": self.server.instance})
         if path.startswith("/api/"):
             if not self._api_allowed():
                 return self._json(403, {"error": "Acesso negado"})
@@ -118,7 +163,10 @@ class Handler(BaseHTTPRequestHandler):
     def _api_get(self, path: str) -> None:
         manager = self.server.manager
         if path == "/api/devices":
-            return self._json(200, {"devices": manager.devices(), **manager.status()})
+            return self._json(200, {"devices": manager.devices(), "version": __version__, **manager.status()})
+        if path == "/api/update":
+            force = "force=1" in self.path
+            return self._json(200, self.server.update_info(force))
         return self._json(404, {"error": "Não encontrado"})
 
     # -------------------------------------------------------------- POST
@@ -130,10 +178,18 @@ class Handler(BaseHTTPRequestHandler):
         manager = self.server.manager
         try:
             body = self._body()
-            if path == "/api/heartbeat":
-                self.server.last_heartbeat = time.monotonic()
-                self.server.first_heartbeat = True
+            if path == "/api/bye":
+                self.server.window_closed()
                 return self._json(200, {"ok": True})
+            if path == "/api/update":
+                try:
+                    version = self.server.updater.apply()
+                except UpdateError as exc:
+                    raise ControlError(str(exc)) from None
+                self._json(200, {"ok": True, "version": version})
+                self.server.restart_requested = True
+                self.server.quit_event.set()
+                return None
             if path == "/api/quit":
                 self._json(200, {"ok": True})
                 self.server.quit_event.set()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import os
 import sys
@@ -9,12 +10,15 @@ import tempfile
 import unittest
 import urllib.error
 import urllib.request
+import time
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from climacasa import aes, gree  # noqa: E402
+from climacasa import __version__, aes, atualizar, gree  # noqa: E402
+from climacasa import server as server_module  # noqa: E402
 from climacasa.config import Config  # noqa: E402
 from climacasa.devices import ControlError, Manager  # noqa: E402
 from climacasa.server import ClimaServer  # noqa: E402
@@ -118,8 +122,15 @@ class GreeProtocolTests(unittest.TestCase):
         self.assertEqual(gree.current_temperature({"TemSen": 63}), 23)
         self.assertEqual(gree.current_temperature({"TemSen": 23}), 23)
         self.assertIsNone(gree.current_temperature({"TemSen": 0}))
-        self.assertEqual(gree.swing_from_raw({"SwUpDn": 1, "SwingLfRig": 1}), "both")
-        self.assertEqual(gree.swing_from_raw({"SwUpDn": 3, "SwingLfRig": 0}), "off")
+        self.assertEqual(gree.vane_from_raw({"SwUpDn": 0}), "auto")
+        self.assertEqual(gree.vane_from_raw({"SwUpDn": 1}), "swing")
+        self.assertEqual(gree.vane_from_raw({"SwUpDn": 9}), "swing")
+        self.assertEqual(gree.vane_from_raw({"SwUpDn": 2}), "1")
+        self.assertEqual(gree.vane_from_raw({"SwUpDn": 6}), "5")
+        self.assertEqual(gree.vane_to_raw("3"), {"SwUpDn": 4})
+        self.assertEqual(gree.vane_to_raw("swing"), {"SwUpDn": 1})
+        with self.assertRaises(ValueError):
+            gree.vane_to_raw("6")
         self.assertEqual(gree.feature_to_raw("turbo", True), {"Tur": 1, "Quiet": 0})
         self.assertEqual(gree.feature_to_raw("sleep", False), {"SwhSlp": 0, "SlpMod": 0})
 
@@ -159,7 +170,12 @@ class ManagerTests(unittest.TestCase):
         self.assertEqual(self.manager.control(dev_id, {"mode": "dry"})["mode"], "dry")
         self.assertEqual(self.manager.control(dev_id, {"target": 19})["target"], 19)
         self.assertEqual(self.manager.control(dev_id, {"fan": "5"})["fan"], "5")
-        self.assertEqual(self.manager.control(dev_id, {"swing": "vertical"})["swing"], "vertical")
+        view = self.manager.control(dev_id, {"vane": "3"})
+        self.assertEqual(view["vane"], "3")
+        self.assertEqual(self.gree_a.state["SwUpDn"], 4)
+        self.assertEqual(self.gree_a.commands[-1], {"SwUpDn": 4})  # aleta horizontal intocada
+        self.assertEqual([v["value"] for v in view["vanes"]], ["auto", "swing", "1", "2", "3", "4", "5"])
+        self.assertIsNone(view["hswing"])
         view = self.manager.control(dev_id, {"feature": "turbo", "on": True})
         self.assertTrue(next(f for f in view["features"] if f["key"] == "turbo")["on"])
         self.assertEqual(self.gree_a.state["Tur"], 1)
@@ -199,7 +215,9 @@ class ManagerTests(unittest.TestCase):
         self.assertEqual(view["humidity"], 61)
         self.assertEqual([m["value"] for m in view["modes"]], ["cool", "dry", "fan", "auto", "lg:ENERGY_SAVING"])
         self.assertEqual([f["value"] for f in view["fans"]], ["AUTO", "LOW", "MID", "HIGH"])
-        self.assertEqual([s["value"] for s in view["swings"]], ["off", "vertical"])
+        self.assertEqual([v["value"] for v in view["vanes"]], ["fixed", "swing"])
+        self.assertEqual(view["vane"], "fixed")
+        self.assertIsNone(view["hswing"])  # o perfil simulado não tem aleta horizontal
         self.assertEqual({f["key"] for f in view["features"]}, {"turbo", "eco", "light"})
 
         with self.assertRaises(ControlError) as ctx:
@@ -214,8 +232,12 @@ class ManagerTests(unittest.TestCase):
         self.assertEqual(self.lg.controls[-1], {"temperatureInUnits": {"targetTemperature": 25, "unit": "C"}})
         self.manager.control(dev_id, {"fan": "HIGH"})
         self.assertEqual(self.lg.controls[-1], {"airFlow": {"windStrength": "HIGH"}})
-        self.assertEqual(self.manager.control(dev_id, {"swing": "both"})["swing"], "vertical")
+        self.assertEqual(self.manager.control(dev_id, {"vane": "swing"})["vane"], "swing")
         self.assertEqual(self.lg.controls[-1], {"windDirection": {"rotateUpDown": True}})
+        with self.assertRaises(ControlError):
+            self.manager.control(dev_id, {"vane": "3"})  # a API da LG não tem posições fixas
+        with self.assertRaises(ControlError):
+            self.manager.control(dev_id, {"hswing": True})
         view = self.manager.control(dev_id, {"feature": "turbo", "on": True})
         self.assertEqual(self.lg.controls[-1], {"airFlow": {"windStrength": "POWER"}})
         self.assertTrue(next(f for f in view["features"] if f["key"] == "turbo")["on"])
@@ -286,6 +308,96 @@ class ServerTests(unittest.TestCase):
         self.assertIn("temperatura", json.loads(body)["error"])
         status, _ = self.request("POST", "/api/gree/discover", {"ip": "não-é-ip"})
         self.assertEqual(status, 400)
+
+    def test_closing_window_quits_only_after_grace_period(self):
+        server_module.CLOSE_GRACE = 0.4
+        self.addCleanup(setattr, server_module, "CLOSE_GRACE", 15.0)
+        self.assertEqual(self.request("POST", "/api/bye?t=errado", {}, token=False)[0], 403)
+        # recarregar a página: o aviso de fechamento é seguido de um novo pedido
+        self.assertEqual(self.request("POST", f"/api/bye?t={self.server.token}", {}, token=False)[0], 200)
+        self.assertEqual(self.request("GET", "/api/devices")[0], 200)
+        time.sleep(0.8)
+        self.assertFalse(self.server.quit_event.is_set())
+        # fechar de verdade: nenhum pedido depois do aviso
+        self.request("POST", f"/api/bye?t={self.server.token}", {}, token=False)
+        self.assertTrue(self.server.quit_event.wait(3))
+
+    def test_ping_identifies_version_and_instance(self):
+        status, body = self.request("GET", "/ping", token=False)
+        info = json.loads(body)
+        self.assertEqual((info["app"], info["version"], info["instance"]), ("clima-casa", __version__, self.server.instance))
+
+
+class QuietHandler(SimpleHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+
+class UpdateTests(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.published = self.root / "publicado"
+        self.installed = self.root / "instalado"
+        for folder, files in (
+            (self.installed, {"climacasa/a.py": b"velho\n", "climacasa/antigo.py": b"apagar\n", "INSTALAR.bat": b"x\r\n",
+                              "meu-arquivo.txt": b"do usuario\n"}),
+            (self.published, {"climacasa/a.py": b"novo\n", "climacasa/b.py": b"b\n", "INSTALAR.bat": b"@echo off\ny\n"}),
+        ):
+            for rel, data in files.items():
+                (folder / rel).parent.mkdir(parents=True, exist_ok=True)
+                (folder / rel).write_bytes(data)
+        old = {"versao": "1.0.0", "arquivos": {r: atualizar.digest((self.installed / r).read_bytes())
+                                               for r in ("climacasa/a.py", "climacasa/antigo.py", "INSTALAR.bat")}}
+        (self.installed / "versao.json").write_text(json.dumps(old), encoding="utf-8")
+        new = {"versao": "99.0.0", "notas": "teste", "arquivos": {
+            r: atualizar.digest((self.published / r).read_bytes()) for r in ("climacasa/a.py", "climacasa/b.py", "INSTALAR.bat")}}
+        (self.published / "versao.json").write_text(json.dumps(new), encoding="utf-8")
+        handler = functools.partial(QuietHandler, directory=str(self.published))
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.updater = atualizar.Updater(f"http://127.0.0.1:{self.httpd.server_address[1]}/", self.installed)
+
+    def tearDown(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    def test_check_reports_new_version(self):
+        info = self.updater.check()
+        self.assertTrue(info["available"])
+        self.assertEqual((info["current"], info["latest"], info["notes"]), (__version__, "99.0.0", "teste"))
+
+    def test_apply_replaces_files_and_removes_stale_ones(self):
+        self.assertEqual(self.updater.apply(), "99.0.0")
+        self.assertEqual((self.installed / "climacasa/a.py").read_bytes(), b"novo\n")
+        self.assertEqual((self.installed / "climacasa/b.py").read_bytes(), b"b\n")
+        self.assertFalse((self.installed / "climacasa/antigo.py").exists())
+        self.assertEqual((self.installed / "INSTALAR.bat").read_bytes(), b"@echo off\r\ny\r\n")
+        self.assertTrue((self.installed / "meu-arquivo.txt").exists())  # não é do programa: fica
+        self.assertEqual(atualizar.read_manifest(self.installed)["versao"], "99.0.0")
+
+    def test_corrupted_download_changes_nothing(self):
+        (self.published / "climacasa/b.py").write_bytes(b"adulterado\n")
+        with self.assertRaises(atualizar.UpdateError):
+            self.updater.apply()
+        self.assertEqual((self.installed / "climacasa/a.py").read_bytes(), b"velho\n")
+        self.assertTrue((self.installed / "climacasa/antigo.py").exists())
+
+    def test_install_from_extracted_folder(self):
+        atualizar.install_from_folder(self.published, self.installed)
+        self.assertEqual((self.installed / "climacasa/a.py").read_bytes(), b"novo\n")
+        self.assertFalse((self.installed / "climacasa/antigo.py").exists())
+
+    def test_manifest_with_unsafe_path_is_rejected(self):
+        bad = {"versao": "99.0.0", "arquivos": {"../fora.txt": atualizar.digest(b"x")}}
+        with self.assertRaises(atualizar.UpdateError):
+            atualizar.replace_files(self.installed, bad, lambda rel: b"x")
+
+    def test_published_manifest_matches_program_files(self):
+        manifest = atualizar.read_manifest(atualizar.APP_DIR)
+        self.assertIsNotNone(manifest, "rode: python -m climacasa.atualizar")
+        self.assertEqual(manifest["versao"], __version__, "versao.json desatualizado: rode python -m climacasa.atualizar")
+        self.assertEqual(manifest["arquivos"], atualizar.build_manifest()["arquivos"],
+                         "versao.json desatualizado: rode python -m climacasa.atualizar")
 
 
 if __name__ == "__main__":

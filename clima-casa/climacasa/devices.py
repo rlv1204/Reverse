@@ -4,8 +4,11 @@ Cada aparelho é apresentado à tela como um dicionário com os mesmos campos,
 independentemente da marca:
 
     id, brand, name, source, online, error, power, mode, modes, target,
-    tempMin, tempMax, tempStep, current, humidity, fan, fans, swing, swings,
-    features
+    tempMin, tempMax, tempStep, current, humidity, fan, fans, vane, vanes,
+    hswing, features
+
+``vanes`` lista as posições da aleta vertical ({value, label, kind, pos});
+``hswing`` é a oscilação horizontal (None quando o aparelho não a oferece).
 """
 
 from __future__ import annotations
@@ -27,7 +30,6 @@ MODE_INFO = {
     "auto": ("Auto", "auto"),
     "heat": ("Calor", "sun"),
 }
-SWING_LABELS = {"off": "Parada", "vertical": "Vertical", "horizontal": "Horizontal", "both": "Ambas"}
 
 GREE_TTL = 4.0
 GREE_TTL_OFFLINE = 20.0
@@ -52,15 +54,11 @@ def _mode_options(keys: list[str]) -> list[dict]:
     return options
 
 
-def _swing_options(vertical: bool, horizontal: bool) -> list[dict]:
-    keys = ["off"]
-    if vertical:
-        keys.append("vertical")
-    if horizontal:
-        keys.append("horizontal")
-    if vertical and horizontal:
-        keys.append("both")
-    return [{"value": k, "label": SWING_LABELS[k]} for k in keys] if len(keys) > 1 else []
+def _vane_options(options) -> list[dict]:
+    return [{"value": v, "label": label, "kind": kind, "pos": pos} for v, label, kind, pos in options]
+
+
+LG_VANES = [("fixed", "Parada", "auto", 0), ("swing", "Oscilar", "swing", 0)]
 
 
 @dataclass
@@ -225,7 +223,7 @@ class Manager:
             "modes": _mode_options(["cool", "dry", "fan", "auto", "heat"]),
             "tempMin": 16, "tempMax": 30, "tempStep": 1,
             "fans": [{"value": v, "label": label} for v, label in gree.FAN_OPTIONS],
-            "swings": _swing_options(True, True),
+            "vanes": _vane_options(gree.VANE_OPTIONS),
             "address": entry.device.ip,
             "firmware": entry.firmware,
         })
@@ -237,7 +235,7 @@ class Manager:
                 "current": gree.current_temperature(raw),
                 "humidity": raw.get("DwatSen") or None,
                 "fan": str(raw.get("WdSpd")) if raw.get("WdSpd") is not None else None,
-                "swing": gree.swing_from_raw(raw),
+                "vane": gree.vane_from_raw(raw),
                 "features": [
                     {"key": key, "label": label, "icon": icon, "on": bool(raw.get(props[0]))}
                     for key, label, icon, props in gree.FEATURES
@@ -364,7 +362,7 @@ class Manager:
             "modes": mode_options,
             "tempMin": caps.temp_min, "tempMax": caps.temp_max, "tempStep": caps.temp_step,
             "fans": [{"value": f, "label": lg.FAN_LABELS.get(f, f.title())} for f in caps.fans if f != "POWER"],
-            "swings": _swing_options(caps.swing_vertical, caps.swing_horizontal),
+            "vanes": _vane_options(LG_VANES) if caps.swing_vertical else [],
             "features": features,
         })
         raw = entry.raw
@@ -386,8 +384,6 @@ class Manager:
                 feature["on"] = bool((raw.get("powerSave") or {}).get("powerSaveEnabled"))
             elif feature["key"] == "light":
                 feature["on"] = lg.light_is_on((raw.get("display") or {}).get("light"))
-        vertical = bool(direction.get("rotateUpDown"))
-        horizontal = bool(direction.get("rotateLeftRight"))
         view.update({
             "power": (raw.get("operation") or {}).get("airConOperationMode") == "POWER_ON",
             "mode": mode,
@@ -395,7 +391,8 @@ class Manager:
             "current": temps.get("currentTemperature"),
             "humidity": humidity,
             "fan": fan if fan != "POWER" else entry.last_fan or None,
-            "swing": "both" if vertical and horizontal else "vertical" if vertical else "horizontal" if horizontal else "off",
+            "vane": "swing" if direction.get("rotateUpDown") else "fixed",
+            "hswing": bool(direction.get("rotateLeftRight")) if caps.swing_horizontal else None,
         })
         if fan and fan != "POWER":
             entry.last_fan = fan
@@ -434,7 +431,7 @@ class Manager:
             "id": device_id, "brand": brand, "name": self._name(device_id), "source": source,
             "online": entry.error is None and bool(entry.raw), "error": entry.error, "loaded": bool(entry.raw) or entry.error is not None,
             "power": None, "mode": None, "modes": [], "target": None, "tempMin": 16, "tempMax": 30, "tempStep": 1,
-            "current": None, "humidity": None, "fan": None, "fans": [], "swing": None, "swings": [], "features": [],
+            "current": None, "humidity": None, "fan": None, "fans": [], "vane": None, "vanes": [], "hswing": None, "features": [],
         }
 
     def rename(self, device_id: str, name: str) -> None:
@@ -512,9 +509,9 @@ def gree_command(body: dict) -> dict:
             raise ControlError("Velocidade inválida")
         # Escolher uma velocidade cancela Turbo e Silencioso, como no controle remoto.
         return {"WdSpd": int(body["fan"]), "Tur": 0, "Quiet": 0}
-    if "swing" in body:
+    if "vane" in body:
         try:
-            return gree.swing_to_raw(str(body["swing"]))
+            return gree.vane_to_raw(str(body["vane"]))
         except ValueError as exc:
             raise ControlError(str(exc)) from None
     if "feature" in body:
@@ -549,18 +546,14 @@ def lg_command(caps: lg.Capabilities, body: dict, entry: _LGEntry | None = None)
         if body["fan"] not in caps.fans:
             raise ControlError("Velocidade não suportada por este aparelho")
         return {"airFlow": {caps.fan_key: body["fan"]}}
-    if "swing" in body:
-        swing = str(body["swing"])
-        if swing not in SWING_LABELS:
-            raise ControlError("Direção inválida")
-        direction = {}
-        if caps.swing_vertical:
-            direction["rotateUpDown"] = swing in ("vertical", "both")
-        if caps.swing_horizontal:
-            direction["rotateLeftRight"] = swing in ("horizontal", "both")
-        if not direction:
-            raise ControlError("Este aparelho não permite mudar a direção do vento pelo app")
-        return {"windDirection": direction}
+    if "vane" in body:
+        if not caps.swing_vertical or body["vane"] not in ("fixed", "swing"):
+            raise ControlError("A API da LG só permite ligar ou desligar a oscilação vertical")
+        return {"windDirection": {"rotateUpDown": body["vane"] == "swing"}}
+    if "hswing" in body:
+        if not caps.swing_horizontal:
+            raise ControlError("Este aparelho não oferece oscilação horizontal pelo app")
+        return {"windDirection": {"rotateLeftRight": bool(body["hswing"])}}
     if "feature" in body:
         key, on = str(body["feature"]), bool(body.get("on"))
         if key == "turbo" and "POWER" in caps.fans:

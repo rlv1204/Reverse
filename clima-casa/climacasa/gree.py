@@ -68,6 +68,18 @@ FEATURES = [
     ("eco", "Economia", "eco", ("SvSt",)),
 ]
 
+# Aleta vertical (SwUpDn): 0 = padrão, 1 = oscilação completa, 2 a 6 = posições
+# fixas da mais alta à mais baixa ("Direç.1" a "Direç.5" no app Gree+) e
+# 7 a 11 = oscilação em uma faixa.
+VANE_OPTIONS = [
+    ("auto", "Auto", "auto", 0),
+    ("swing", "Oscilar", "swing", 0),
+    ("1", "Posição 1", "pos", 1),
+    ("2", "Posição 2", "pos", 2),
+    ("3", "Posição 3", "pos", 3),
+    ("4", "Posição 4", "pos", 4),
+    ("5", "Posição 5", "pos", 5),
+]
 # Valores de SwUpDn que representam oscilação (1 = completa, 7 a 11 = parcial).
 _VERTICAL_SWING_VALUES = {1, 7, 8, 9, 10, 11}
 
@@ -384,24 +396,25 @@ def current_temperature(raw: dict) -> float | None:
     return value - TEMP_OFFSET if value >= TEMP_OFFSET else value
 
 
-def swing_from_raw(raw: dict) -> str:
-    vertical = raw.get("SwUpDn") in _VERTICAL_SWING_VALUES
-    horizontal = raw.get("SwingLfRig") == 1
-    if vertical and horizontal:
-        return "both"
-    if vertical:
-        return "vertical"
-    if horizontal:
-        return "horizontal"
-    return "off"
+def vane_from_raw(raw: dict) -> str | None:
+    """Posição da aleta vertical: "auto", "swing" ou "1" (mais alta) a "5" (mais baixa)."""
+    value = raw.get("SwUpDn")
+    if value in _VERTICAL_SWING_VALUES:
+        return "swing"
+    if isinstance(value, int) and 2 <= value <= 6:
+        return str(value - 1)
+    return "auto" if value == 0 else None
 
 
-def swing_to_raw(swing: str) -> dict:
-    table = {"off": (0, 0), "vertical": (1, 0), "horizontal": (0, 1), "both": (1, 1)}
-    if swing not in table:
-        raise ValueError(f"Direção inválida: {swing}")
-    up_down, left_right = table[swing]
-    return {"SwUpDn": up_down, "SwingLfRig": left_right}
+def vane_to_raw(vane: str) -> dict:
+    if vane == "auto":
+        return {"SwUpDn": 0}
+    if vane == "swing":
+        return {"SwUpDn": 1}
+    if vane in ("1", "2", "3", "4", "5"):
+        # No app Gree+ são "Direç.1" a "Direç.5"; no protocolo, 2 a 6.
+        return {"SwUpDn": int(vane) + 1}
+    raise ValueError(f"Posição de aleta inválida: {vane}")
 
 
 def feature_to_raw(key: str, on: bool) -> dict:

@@ -7,35 +7,30 @@ Uso:  python -m climacasa            (abre a janela do programa)
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import shutil
 import subprocess
 import sys
 import threading
 import time
-import urllib.request
 import webbrowser
 from pathlib import Path
 
+from . import __version__, instancia
+from .atualizar import APP_DIR
 from .config import Config, config_dir
 from .devices import Manager
-from .server import APP_SIGNATURE, ClimaServer
+from .server import ClimaServer
 
 DEFAULT_PORT = 8765
 PORT_ATTEMPTS = 10
-# Sem sinal da janela por este tempo, o programa entende que ela foi fechada.
-# (O navegador reduz os temporizadores de janelas minimizadas a ~1 por minuto.)
-HEARTBEAT_TIMEOUT = 150
-STARTUP_GRACE = 300
-
-
-def _already_running(port: int) -> bool:
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/ping", timeout=1.5) as resp:
-            return json.loads(resp.read()).get("app") == APP_SIGNATURE
-    except (OSError, ValueError):
-        return False
+# Opções do Edge/Chrome que impedem o navegador de "congelar" a janela do
+# programa quando ela fica parada ou minimizada por muito tempo.
+KEEP_AWAKE_FLAGS = [
+    "--disable-background-timer-throttling",
+    "--disable-renderer-backgrounding",
+    "--disable-backgrounding-occluded-windows",
+]
 
 
 def _find_app_browser() -> str | None:
@@ -61,8 +56,8 @@ def open_window(url: str) -> None:
         profile = config_dir() / "janela"
         try:
             subprocess.Popen(
-                [browser, f"--app={url}", "--window-size=460,860", f"--user-data-dir={profile}",
-                 "--no-first-run", "--no-default-browser-check"],
+                [browser, f"--app={url}", "--window-size=480,980", f"--user-data-dir={profile}",
+                 "--no-first-run", "--no-default-browser-check", *KEEP_AWAKE_FLAGS],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             return
@@ -124,19 +119,28 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="climacasa", description="Controle dos ares-condicionados")
     parser.add_argument("--porta", type=int, default=DEFAULT_PORT)
     parser.add_argument("--sem-janela", action="store_true", help="não abre a janela automaticamente")
-    parser.add_argument("--manter-aberto", action="store_true", help="não encerra quando a janela é fechada")
+    parser.add_argument("--reiniciar", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--diagnostico", action="store_true", help="testa a rede e procura os aparelhos Gree")
     args = parser.parse_args(argv)
     if args.diagnostico:
         return diagnose()
 
     ports = range(args.porta, args.porta + PORT_ATTEMPTS)
-    for port in ports:
-        if _already_running(port):
-            # Já está aberto: só mostramos a janela de novo.
-            if not args.sem_janela:
-                open_window(f"http://127.0.0.1:{port}/")
-            return 0
+    if args.reiniciar:
+        # Reinício depois de uma atualização: esperamos a versão antiga sair.
+        deadline = time.monotonic() + 20
+        while instancia.ping(ports.start) and time.monotonic() < deadline:
+            time.sleep(0.5)
+    else:
+        for port in ports:
+            info = instancia.ping(port)
+            if info and info.get("version") == __version__:
+                # Já está aberto: só mostramos a janela de novo.
+                if not args.sem_janela:
+                    open_window(f"http://127.0.0.1:{port}/")
+                return 0
+        # Uma versão diferente ainda aberta (por exemplo, antes de atualizar).
+        instancia.quit_running()
 
     if sys.stderr is None:
         # Aberto pelo atalho (sem janela de console): erros vão para um arquivo.
@@ -157,36 +161,44 @@ def main(argv: list[str] | None = None) -> int:
         print(f"As portas {ports.start} a {ports.stop - 1} estão ocupadas. Tente: --porta 9000", file=sys.stderr)
         return 1
     url = f"http://127.0.0.1:{server.port}/"
+    instancia.write(server.port, server.token, server.instance)
 
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    print(f"Clima Casa rodando em {url}")
+    print(f"Clima Casa {__version__} rodando em {url}")
     print("Para encerrar, feche a janela do programa (ou pressione Ctrl+C aqui).")
 
     if not config.data["gree"]:
         # Primeira vez: procuramos os aparelhos Gree automaticamente.
         manager.start_discovery()
 
-    if not args.sem_janela:
+    if not args.sem_janela and not args.reiniciar:
         open_window(url)
 
-    started = last_tick = time.monotonic()
+    # O programa fica aberto até a janela ser fechada (ela avisa ao fechar),
+    # até "Encerrar o programa" nas configurações ou até uma atualização.
+    # Janelas paradas, minimizadas ou com o computador suspenso não encerram nada.
     try:
-        while not server.quit_event.wait(5):
-            now = time.monotonic()
-            if now - last_tick > 30:
-                # O computador estava suspenso: damos tempo para a janela "acordar".
-                server.last_heartbeat = now
-            last_tick = now
-            if args.manter_aberto or args.sem_janela:
-                continue
-            if server.first_heartbeat and now - server.last_heartbeat > HEARTBEAT_TIMEOUT:
-                break
-            if not server.first_heartbeat and now - started > STARTUP_GRACE:
-                break
+        while not server.quit_event.wait(1):
+            pass
     except KeyboardInterrupt:
         pass
     server.shutdown()
+    instancia.clear(server.instance)
+    if server.restart_requested:
+        restart(server.port)
     return 0
+
+
+def restart(port: int) -> None:
+    """Abre de novo o programa (já com os arquivos novos) depois de atualizar."""
+    exe = Path(sys.executable)
+    pythonw = exe.with_name("pythonw.exe")
+    command = [str(pythonw if pythonw.is_file() else exe), "-m", "climacasa", "--reiniciar", "--porta", str(port)]
+    flags = 0
+    if sys.platform == "win32":
+        flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    subprocess.Popen(command, cwd=str(APP_DIR), creationflags=flags, close_fds=True,
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 if __name__ == "__main__":

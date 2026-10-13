@@ -9,7 +9,8 @@ Programa para Windows que liga, desliga e ajusta os ares-condicionados da casa:
 | LG (app LG ThinQ) | (nome que está no app LG) | Pela API oficial da LG, via internet |
 
 Em cada aparelho dá para controlar: ligar/desligar, temperatura (16 a 30 °C), modo
-(Frio, Seco, Ventilar, Auto, Calor), velocidade do vento, direção do vento e funções
+(Frio, Seco, Ventilar, Auto, Calor), velocidade do vento, **posição das aletas**
+(nos Gree: Auto, Oscilar ou posições fixas 1 a 5, como no app Gree+) e funções
 extras (Turbo, Sono, Silencioso, Luz do painel etc.). A tela também mostra a
 temperatura do ambiente (e a umidade, quando o aparelho informa).
 
@@ -26,9 +27,10 @@ Os dois podem ser usados ao mesmo tempo que o Clima Casa.
 1. Baixe o arquivo **clima-casa.zip** (enviado na conversa) ou, no GitHub, a pasta
    `clima-casa` do repositório.
 2. Clique com o botão direito no arquivo `.zip` → **Extrair tudo…** → **Extrair**.
-3. Mova a pasta `clima-casa` para um lugar fixo, por exemplo **Documentos**.
-   O atalho criado no próximo passo aponta para essa pasta; se mudar a pasta de
-   lugar depois, rode o `INSTALAR.bat` de novo.
+
+O instalador copia o programa para a pasta
+`%LOCALAPPDATA%\Programs\ClimaCasa`. Depois de instalar, a pasta extraída do
+zip pode ser apagada.
 
 ## Passo 2 — Instalar
 
@@ -39,12 +41,16 @@ Os dois podem ser usados ao mesmo tempo que o Clima Casa.
 3. O instalador faz três coisas sozinho:
    - **instala o Python** (o "motor" do programa), se ainda não estiver instalado.
      Se o Windows pedir permissão, clique em **Sim**;
+   - copia o programa para a pasta de instalação — **se já houver uma versão
+     anterior, ela é substituída automaticamente** (não precisa apagar nada antes;
+     seus aparelhos, nomes e o token da LG continuam salvos);
    - cria o atalho **Clima Casa** na Área de Trabalho e no Menu Iniciar;
    - procura os aparelhos Gree na rede e mostra quais encontrou.
 4. Se aparecer o aviso do **Firewall do Windows** perguntando sobre o "Python":
    marque **Redes privadas** e clique em **Permitir acesso**. Sem isso o
    computador não consegue ouvir as respostas dos aparelhos Gree.
-5. Quando aparecer **"Pronto!"**, aperte qualquer tecla para fechar.
+5. Quando aparecer **"Pronto!"**, o programa abre sozinho. Aperte qualquer tecla
+   para fechar a janela preta do instalador.
 
 ### Passo 2 — plano B (só se o instalador não conseguir instalar o Python)
 
@@ -57,26 +63,52 @@ Os dois podem ser usados ao mesmo tempo que o Clima Casa.
 ## Passo 3 — Abrir o programa
 
 Dê dois cliques no atalho **Clima Casa** da Área de Trabalho (ou procure
-"Clima Casa" no Menu Iniciar). Abre uma janela parecida com esta:
+"Clima Casa" no Menu Iniciar). A janela tem, de cima para baixo:
 
-```
- [Ângelo] [Escritório] [LG]          ← um botão para cada aparelho
- Ângelo                      (⏻)     ← liga / desliga
- 🌡 23°  💧 61%                       ← temperatura e umidade do ambiente
-        [ desenho do aparelho ]
-   (−)        24 °C        (+)       ← temperatura desejada
-   ──────────●───────────            ← ou arraste a barrinha
- [Frio][Seco][Ventilar][Auto][Calor] ← modo
- [Vento: Médio ▾] [Direção: Ambas ▾]
- [Turbo] [Sono] [Silencioso] ...     ← funções extras (azul = ligada)
- 🛡 Conectado pela rede local    ⚙   ← configurações
-```
+| Parte da tela | Para que serve |
+| --- | --- |
+| **Cartões dos aparelhos** (Ângelo, Escritório, LG) | Escolher qual aparelho controlar. Cada cartão mostra a temperatura do ambiente e se está ligado (bolinha verde). |
+| **Mostrador redondo** | Temperatura desejada. Arraste a bolinha pelo arco, use os botões **−** e **+** ou as setas **↑ ↓** do teclado. Embaixo do número aparecem a temperatura e a umidade do ambiente. |
+| **Botão redondo azul** (canto do mostrador) | Liga e desliga o aparelho. |
+| **Modo** | Frio, Seco, Ventilar, Auto e Calor. As cores da tela acompanham o modo (azul = frio, laranja = calor…). |
+| **Ventilação** | Auto ou velocidades de 1 a 5 (Baixo → Alto). |
+| **Aletas** | Direção do ar na vertical: **Auto**, **Oscilar** ou **posições fixas 1 a 5** (1 = mais horizontal, 5 = mais para baixo) — as mesmas "Direç.1" a "Direç.5" do app Gree+. |
+| **Funções** | Turbo, Sono, Silencioso, Luz do painel, Saúde, X-Fan e Economia. Em destaque = ligada. |
+| **⚙ (canto superior direito)** | Configurações: procurar aparelhos, conta LG, nomes, tema claro/escuro e atualizações. |
 
-- Para **fechar**, basta fechar a janela. O programa encerra sozinho cerca de
-  2 minutos depois.
+- **Pode deixar a janela aberta o tempo que quiser**, mesmo parada ou
+  minimizada: a conexão é mantida. Se o programa ficar fora do ar por algum
+  motivo, aparece **"Reconectando…"** no topo e ele volta sozinho.
+- Para **fechar**, basta fechar a janela; o programa encerra uns 15 segundos
+  depois.
+- **Tema:** ⚙ → Aparência → Automático (segue o Windows), Claro ou Escuro.
 - Dica: para deixar o programa sempre à mão, clique com o botão direito no
   atalho → **Mostrar mais opções** → **Fixar na barra de tarefas**.
-- Atalhos de teclado: setas **↑** e **↓** sobem e descem a temperatura.
+
+### Aletas no aparelho LG
+
+O acesso oficial da LG (ThinQ Connect) só permite **ligar ou desligar a
+oscilação** (vertical e, se o modelo tiver, horizontal). As posições fixas de
+ângulo não fazem parte desse acesso — no LG elas só podem ser escolhidas no
+controle remoto ou no app LG ThinQ.
+
+## Atualizações
+
+Quando houver uma versão nova, aparece uma faixa azul no topo da janela:
+**"Nova versão X disponível — Atualizar"**. Clique em **Atualizar** e confirme.
+O programa baixa a versão nova, confere se os arquivos chegaram inteiros,
+substitui os antigos e reinicia sozinho em alguns segundos. Nada precisa ser
+apagado ou desinstalado, e suas configurações são mantidas.
+
+- O programa verifica sozinho a cada 6 horas. Para verificar na hora:
+  ⚙ → **Atualizações** → **Verificar agora**.
+- Também dá para atualizar "à moda antiga": baixe o zip novo, extraia e rode o
+  `INSTALAR.bat`. Ele fecha o programa aberto e substitui a versão anterior.
+
+> **Vindo da versão 1.0?** Ela ainda não sabia se atualizar sozinha. Desta vez,
+> baixe o zip novo e rode o `INSTALAR.bat` (passo 2). A partir da 1.1 as
+> atualizações são feitas pela própria janela. A pasta da versão 1.0 pode ser
+> apagada depois.
 
 ## Passo 4 — Aparelhos Gree (Ângelo e Escritório)
 
@@ -166,7 +198,9 @@ outro no mesmo site e cole de novo.
 | "Ligue o aparelho antes de alterar esta opção" | O LG não aceita mudar o modo com o aparelho desligado. Ligue primeiro. |
 | "Muitos pedidos à LG em pouco tempo" | A LG limita os pedidos. Espere um minuto. |
 | "O ar-condicionado LG está desconectado da internet" | Abra o app LG ThinQ e confira se o aparelho aparece como conectado. |
-| A janela não abre | Dê dois cliques em `ABRIR-CLIMA-CASA.bat` dentro da pasta. Se nada acontecer, rode o `INSTALAR.bat` de novo e leia as mensagens. |
+| A janela não abre | Rode o `INSTALAR.bat` de novo e leia as mensagens. Erros ficam registrados em `%APPDATA%\ClimaCasa\clima-casa.log`. |
+| "Reconectando…" não some | Feche a janela e abra pelo atalho de novo. |
+| "Não foi possível verificar" (atualizações) | O computador está sem internet ou o GitHub está fora do ar. Tente mais tarde; o programa continua funcionando normalmente. |
 | Quero fechar o programa na hora | ⚙ Configurações → **Encerrar o programa**. |
 
 ## Privacidade e segurança
@@ -182,7 +216,8 @@ outro no mesmo site e cole de novo.
 
 ## Desinstalar
 
-1. Apague a pasta `clima-casa`.
+1. Feche o programa e apague a pasta `%LOCALAPPDATA%\Programs\ClimaCasa`
+   (cole esse endereço na barra do Explorador de Arquivos).
 2. Apague o atalho **Clima Casa** da Área de Trabalho.
 3. (Opcional) Apague a pasta `%APPDATA%\ClimaCasa` — cole esse endereço na barra
    do Explorador de Arquivos para encontrá-la.
@@ -211,7 +246,7 @@ Há duas gerações de criptografia: **AES-ECB** (firmware antigo, chave genéri
 
 Principais propriedades: `Pow` (liga), `Mod` (0 auto, 1 frio, 2 seco,
 3 ventilar, 4 calor), `SetTem` (°C), `TemSen` (sensor, com +40 de deslocamento),
-`WdSpd` (0 auto … 5 alto), `SwUpDn`/`SwingLfRig` (oscilação vertical/horizontal),
+`WdSpd` (0 auto … 5 alto), `SwUpDn` (aleta vertical: 0 auto, 1 oscilar, 2 a 6 = posições fixas 1 a 5), `SwingLfRig` (aleta horizontal),
 `Tur` (turbo), `Quiet`, `SwhSlp` (sono), `Lig` (luz), `Health`, `Blo` (X-Fan),
 `SvSt` (economia).
 
@@ -229,9 +264,10 @@ realmente suporta.
 
 ```
 clima-casa/
-├── INSTALAR.bat            instala o Python (se faltar) e cria o atalho
+├── INSTALAR.bat            instala o Python (se faltar), instala/atualiza o programa e cria o atalho
 ├── ABRIR-CLIMA-CASA.bat    abre o programa sem o atalho
 ├── LEIA-ME.md              este guia
+├── versao.json             número da versão e impressão digital (SHA-256) de cada arquivo
 ├── climacasa/
 │   ├── __main__.py         início: abre a janela e o servidor local
 │   ├── gree.py             protocolo local dos aparelhos Gree
@@ -240,7 +276,9 @@ clima-casa/
 │   ├── devices.py          junta Gree e LG num formato único para a tela
 │   ├── server.py           servidor local (só 127.0.0.1) que serve a tela
 │   ├── config.py           configurações salvas
-│   ├── instalar.py         cria atalhos e ícone no Windows
+│   ├── instalar.py         copia o programa para a pasta de instalação e cria os atalhos
+│   ├── atualizar.py        atualização pela janela (baixa, confere e substitui os arquivos)
+│   ├── instancia.py        localiza/encerra a cópia aberta do programa
 │   └── web/                a tela (HTML, CSS e JavaScript)
 └── testes/                 testes automáticos e simuladores dos aparelhos
 ```

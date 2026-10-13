@@ -33,8 +33,14 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo  [2/3] Criando o atalho "Clima Casa" na Area de Trabalho...
+echo  [2/3] Instalando o programa e criando o atalho "Clima Casa"...
+echo        (se houver uma versao anterior, ela e substituida; suas configuracoes sao mantidas)
 "%PY%" -m climacasa.instalar
+if errorlevel 1 (
+  echo.
+  pause
+  exit /b 1
+)
 echo.
 echo  [3/3] Testando a rede e procurando os aparelhos Gree...
 echo        Se o Windows perguntar sobre o Firewall, marque "Redes privadas" e clique em PERMITIR.
@@ -42,10 +48,14 @@ echo.
 "%PY%" -m climacasa --diagnostico
 echo.
 echo  ================================================
-echo   Pronto! Abra o programa pelo atalho "Clima Casa"
-echo   na Area de Trabalho.
+echo   Pronto! O Clima Casa vai abrir agora.
+echo   Depois, use o atalho "Clima Casa" na Area de Trabalho.
+echo   A pasta extraida do zip ja pode ser apagada.
 echo  ================================================
 echo.
+set "PYW=%PY:python.exe=pythonw.exe%"
+if not exist "%PYW%" set "PYW=%PY%"
+start "" /D "%LOCALAPPDATA%\Programs\ClimaCasa" "%PYW%" -m climacasa
 pause
 exit /b 0
 

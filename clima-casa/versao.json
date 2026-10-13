@@ -1,0 +1,26 @@
+{
+  "versao": "1.1.0",
+  "notas": "Aletas com posições fixas (Gree), nova interface, reconexão automática e atualização pela própria janela.",
+  "arquivos": {
+    "ABRIR-CLIMA-CASA.bat": "c34ade83c30e824e3adabd59fd8285b38e4c99eb5b96b0dc0dfab91de7e083d2",
+    "INSTALAR.bat": "2b354f684cce86e3571dffce5e69b9b8f88133742390c1567b5da6934cc5a4fd",
+    "LEIA-ME.md": "57a7d33576b032f8685d176349f3d1aba186f0123a4a257038308cb21f9362b4",
+    "climacasa/__init__.py": "5a8d309dfc9c800a398e6de8faf9fa9e42b323688dc33f489be0cc533cb8f9e1",
+    "climacasa/__main__.py": "dc7ce753b1ccd370a086975505672d9caec09d3b7c7a374ae3ce8bd6d51123b7",
+    "climacasa/aes.py": "dd2882f89b11314ded1929f96d08ccc812a4b1988ef3ccfc3bcb3abb2b21e271",
+    "climacasa/atualizar.py": "1286383ec00971824ee7887085b244325d2b22bc112a7cb5d9957e224190a18d",
+    "climacasa/config.py": "37d40d0a8f03924222194518c7191ec56216aab097619c9bf4f71bce98ebc205",
+    "climacasa/devices.py": "1439f3f58b8dbb1498b4196352f79212a779385f860719fd42fee1f32afab373",
+    "climacasa/gree.py": "a37f0d6ac185c7a13ab491c72904d2cadc5db228c99a1f986aad0a1d79162629",
+    "climacasa/instalar.py": "699e42425dc6b8da34c1592e68ea00c30ddcfcb451c01bff6f80d57b25d0c86c",
+    "climacasa/instancia.py": "7fa5059b5296e75ed292b462ae76620fe1c7b8b19269416892408184c86eff06",
+    "climacasa/lg.py": "0382a7b94bc37d1c3ca46772c2ca38c3efe6b663f4d2b7023bef57bfe553d72e",
+    "climacasa/server.py": "3b8562701440e12af6ac353a257b057c84cb54600e559f87ab1b914f25fb94b7",
+    "climacasa/web/app.css": "48d0fa6b1b811dc22022e0efe841fd05008f8d40bf36e10323a8c93094ede431",
+    "climacasa/web/app.js": "9d0883fed1ee19c45d1fb3723403492d1b460503ea1188ded64c7fb082a567c1",
+    "climacasa/web/icone.svg": "fadc702c8745e0061f0ee9a1748a30d3fc4d7fa135824503bd85418efcb622f7",
+    "climacasa/web/index.html": "443a986b4a0d849cffa2dc1172d38881dde0f8e1033271ba5e4a6bcb88f1e4e6",
+    "testes/simuladores.py": "fcd24a15ebe58b2f9d758ca3999aed2e987216618539bb53ea1b8535e7a82a17",
+    "testes/test_clima.py": "efed6541c782f02402b2f3ecf40742c0f958e47ae9a5beaf70fa626714861337"
+  }
+}

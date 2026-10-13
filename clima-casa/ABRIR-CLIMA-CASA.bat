@@ -9,7 +9,9 @@ if not defined PY (
 )
 set "PYW=%PY:python.exe=pythonw.exe%"
 if not exist "%PYW%" set "PYW=%PY%"
-start "" "%PYW%" -m climacasa
+set "APPDIR=%LOCALAPPDATA%\Programs\ClimaCasa"
+if not exist "%APPDIR%\climacasa\__main__.py" set "APPDIR=%~dp0"
+start "" /D "%APPDIR%" "%PYW%" -m climacasa
 exit /b 0
 
 :acha_python
