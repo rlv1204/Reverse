@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>EdgeControl.App</RootNamespace>
+    <AssemblyName>EdgeControl</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdgeControl.Core\EdgeControl.Core.csproj" />
+    <ProjectReference Include="..\EdgeControl.Windows\EdgeControl.Windows.csproj" />
+  </ItemGroup>
+</Project>

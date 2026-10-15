@@ -1,0 +1,24 @@
+﻿EDGE CONTROL
+============
+
+Configuração e overclock USB do DualSense Edge em um só aplicativo.
+
+O que será instalado
+- Somente o programa Edge Control (pasta Arquivos de Programas e atalho no menu Iniciar).
+- Nenhum driver é instalado ou alterado por este instalador.
+
+Para usar o overclock USB
+- O driver hidusbf (versão assinada da Battle Beaver) precisa estar instalado no PC.
+  Instale-o pelo Setup oficial do hidusbf ("Install Service") uma única vez.
+- O Edge Control só grava a taxa escolhida para o seu controle, salva um backup antes
+  e restaura a configuração anterior sozinho se o controle não voltar a funcionar.
+
+Segurança
+- O app lê o controle mas não grava nada na memória dele.
+  A seção de Perfis fica bloqueada até que os comandos sejam validados.
+- A taxa de polling não altera tensão nem corrente do cabo USB.
+- Desinstalar o Edge Control não desfaz o overclock. Antes de desinstalar,
+  use "Restaurar padrão" na tela Overclock USB se quiser voltar ao original.
+
+Projeto independente, sem vínculo com a Sony Interactive Entertainment.
+DualSense e PlayStation são marcas da Sony Interactive Entertainment.

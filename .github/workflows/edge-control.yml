@@ -1,0 +1,63 @@
+name: Edge Control
+
+on:
+  push:
+    paths:
+      - "apps/edge-control/**"
+      - ".github/workflows/edge-control.yml"
+  pull_request:
+    paths:
+      - "apps/edge-control/**"
+      - ".github/workflows/edge-control.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edge-control-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test, publish and package
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: apps/edge-control
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Unit tests
+        run: dotnet test tests/EdgeControl.Core.Tests -c Release
+
+      - name: Publish self-contained app
+        run: >-
+          dotnet publish src/EdgeControl.App -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -o artifacts/publish
+
+      - name: Build installer
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+          $version = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version
+          & $iscc "/DAppVersion=$version" "/DPublishDir=..\artifacts\publish" installer\EdgeControl.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EdgeControl-Setup
+          path: apps/edge-control/artifacts/installer/*.exe
+          if-no-files-found: error

@@ -1,0 +1,202 @@
+<UserControl x:Class="EdgeControl.App.Views.OverclockView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="StatCard" TargetType="Border" BasedOn="{StaticResource CardBorder}">
+            <Setter Property="Width" Value="210" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <DockPanel Margin="0,0,0,4">
+            <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Command="{Binding RefreshCommand}" Margin="0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE72C;" Style="{StaticResource Glyph}" FontSize="14" />
+                    <TextBlock Text="Atualizar" Margin="8,0,0,0" />
+                </StackPanel>
+            </Button>
+            <TextBlock Text="Overclock USB" Style="{StaticResource PageTitle}" />
+        </DockPanel>
+        <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,22"
+                   Text="Ajusta a taxa de polling do controle pelo driver hidusbf já instalado no PC. Só altera dois valores do Windows (filtro do dispositivo e bInterval), salva um backup antes e restaura sozinho se o controle não voltar." />
+
+        <!-- Device and environment -->
+        <WrapPanel>
+            <Border Style="{StaticResource StatCard}">
+                <StackPanel>
+                    <TextBlock Text="Controle" Style="{StaticResource Muted}" />
+                    <TextBlock Text="{Binding DeviceText}" Style="{StaticResource Value}" FontSize="15" />
+                    <TextBlock Text="{Binding SpeedText}" Style="{StaticResource Muted}" Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource StatCard}">
+                <StackPanel>
+                    <TextBlock Text="Driver hidusbf" Style="{StaticResource Muted}" />
+                    <TextBlock Text="{Binding DriverText}" FontSize="15">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Value}">
+                                <Setter Property="Foreground" Value="{StaticResource Warn}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DriverOk}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource Ok}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0">
+                        <Run Text="Filtro:" />
+                        <Run Text="{Binding FilterText, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource StatCard}">
+                <StackPanel>
+                    <TextBlock Text="Controladora USB" Style="{StaticResource Muted}" />
+                    <TextBlock Text="{Binding ControllerText}" Style="{StaticResource Value}" FontSize="15" />
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0">
+                        <Run Text="Integridade de Memória:" />
+                        <Run Text="{Binding MemoryIntegrityText, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </WrapPanel>
+
+        <!-- Rates: configured vs. scheduled vs. measured -->
+        <Border Style="{StaticResource CardBorder}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Configurada no Windows" Style="{StaticResource Muted}" />
+                    <TextBlock Text="{Binding ConfiguredRateText}" Style="{StaticResource Value}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Agendada pelo hub USB" Style="{StaticResource Muted}" />
+                    <TextBlock Text="{Binding EffectiveRateText}" Style="{StaticResource Value}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Medida agora" Style="{StaticResource Muted}" />
+                    <TextBlock Text="{Binding MeasuredRateText}" Style="{StaticResource Value}" Foreground="{StaticResource Accent}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <TextBlock Text="{Binding InterfaceFilterNote}" Foreground="{StaticResource Warn}" Margin="0,0,0,12" />
+
+        <!-- Rate picker -->
+        <Border Style="{StaticResource CardBorder}" Visibility="{Binding HasDevice, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Text="Escolha a taxa" Style="{StaticResource SectionTitle}" />
+                <ListBox ItemsSource="{Binding Tiles}" SelectedItem="{Binding SelectedTile}" Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Cursor" Value="Hand" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Tile" Width="118" Margin="0,0,10,10" Padding="12,12" CornerRadius="12"
+                                                Background="{StaticResource CardHover}" BorderBrush="{StaticResource Border}" BorderThickness="2">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Tile" Property="BorderBrush" Value="{StaticResource Accent}" />
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Tile" Property="Background" Value="{StaticResource Border}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Subtitle}" Style="{StaticResource Muted}" FontSize="12" />
+                                <TextBlock Text="atual" Foreground="{StaticResource Ok}" FontSize="11" Margin="0,4,0,0"
+                                           Visibility="{Binding IsConfigured, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Blockers -->
+                <ItemsControl ItemsSource="{Binding Blockers}" Margin="0,6,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#xE783;" Style="{StaticResource Glyph}" Foreground="{StaticResource Danger}" FontSize="14" />
+                                <TextBlock Text="{Binding}" Foreground="{StaticResource Danger}" Margin="8,0,0,0" MaxWidth="760" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Warnings that need explicit acknowledgement -->
+                <ItemsControl ItemsSource="{Binding Warnings}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#2A2414" BorderBrush="{StaticResource Warn}" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Warning.Message}" Foreground="{StaticResource Warn}" />
+                                    <CheckBox Content="Entendi e quero continuar" IsChecked="{Binding Acknowledged}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- What will be written -->
+                <TextBlock Text="O que será feito" Style="{StaticResource Muted}" Margin="0,6,0,4" />
+                <ItemsControl ItemsSource="{Binding PlannedChanges}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="13" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                    <Button Content="Aplicar taxa" Style="{StaticResource PrimaryButton}" Command="{Binding ApplyCommand}" />
+                    <Button Content="Restaurar padrão" Style="{StaticResource SecondaryButton}" Command="{Binding RestoreCommand}" />
+                    <Button Content="Copiar diagnóstico" Style="{StaticResource SecondaryButton}" Command="{Binding CopyDiagnosticCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Activity log -->
+        <Border Style="{StaticResource CardBorder}">
+            <StackPanel>
+                <TextBlock Text="Registro" Style="{StaticResource SectionTitle}" />
+                <ItemsControl ItemsSource="{Binding Log}" MaxHeight="180">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Muted}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
